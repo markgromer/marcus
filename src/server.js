@@ -120,7 +120,7 @@ app.post('/api/import-projects', async (req, res, next) => {
     const imported = [];
     for (const item of items.slice(0, 100)) {
       if (!item?.name || !item?.path) continue;
-      imported.push(await upsertProject({ name: item.name, path: item.path, repository: item.path, status: 'active', kind: item.kind || 'project' }));
+      imported.push(await upsertProject({ name: item.name, workspace: item.path, repository: item.path, status: 'active' }));
     }
     res.status(201).json({ imported });
   } catch (error) { next(error); }
@@ -130,15 +130,20 @@ app.get('/api/dashboard', async (_req, res, next) => {
   try {
     const [projects, operations, memory] = await Promise.all([listProjects(), listOperations(20), recentMemory(8)]);
     const needsYou = operations.filter((op) => ['pending_approval', 'awaiting_approval'].includes(op.status));
-    const active = operations.filter((op) => ['running', 'approved', 'prepared'].includes(op.status));
-    res.json({
-      projects,
-      operations,
-      needsYou,
-      active,
-      recent: memory,
-      counts: { projects: projects.length, needsYou: needsYou.length, active: active.length }
-    });
+    const active = operations.filter((op) => ['running', 'approved', 'prepared', 'ready'].includes(op.status));
+    res.json({ projects, operations, needsYou, active, recent: memory, counts: { projects: projects.length, needsYou: needsYou.length, active: active.length } });
+  } catch (error) { next(error); }
+});
+
+app.post('/api/guided-operation', async (req, res, next) => {
+  try {
+    const projects = await listProjects();
+    const project = projects.find((item) => item.id === req.body?.projectId) || projects[0];
+    if (!project) return res.status(400).json({ error: 'Import a project before creating the guided operation.' });
+    const config = await loadConfig();
+    const prompt = String(req.body?.prompt || '').trim() || `Audit this project before changing anything. Identify the highest-value concrete improvement that can be safely completed now. Implement that one improvement, run the relevant checks or tests, and summarize exactly what changed and any remaining risk. Do not deploy, publish, change billing, or perform destructive actions.`;
+    const operation = await createOperation({ type: 'coding.task', projectId: project.id, payload: { prompt } }, config);
+    res.status(201).json({ operation, project });
   } catch (error) { next(error); }
 });
 
