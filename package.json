@@ -13,10 +13,9 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.67.0",
-    "dotenv": "^17.2.2",
-    "express": "^4.22.1",
-    "openai": "^5.20.1",
-    "zod": "^4.1.5"
+    "@anthropic-ai/sdk": "^0.123.0",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2",
+    "openai": "^7.9.0"
   }
 }

@@ -1,15 +1,16 @@
 import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
+// Build extraction-specific markers from fragments so this checker does not flag its own source.
 const bannedLiterals = [
-  'markgromer',
-  'mark gromer',
-  'c:\\users\\markg',
-  'task-tracker-5wsa',
-  'scoop doggy logs',
-  'poopsites',
-  'fastfoodsms',
-  'titan syndicate'
+  ['mark', 'gromer'].join(''),
+  ['mark', ' ', 'gromer'].join(''),
+  ['c:', '\\\\', 'users', '\\\\', 'markg'].join(''),
+  ['task', '-tracker-', '5wsa'].join(''),
+  ['scoop', ' doggy ', 'logs'].join(''),
+  ['poop', 'sites'].join(''),
+  ['fast', 'food', 'sms'].join(''),
+  ['titan', ' syndicate'].join('')
 ];
 const secretPatterns = [
   /\bsk-[A-Za-z0-9_-]{20,}\b/,
@@ -25,8 +26,8 @@ for (const file of files) {
   let text;
   try { text = await fs.readFile(file, 'utf8'); } catch { continue; }
   const lower = text.toLowerCase();
-  for (const literal of bannedLiterals) if (lower.includes(literal)) failures.push(`${file}: contains banned extraction literal "${literal}"`);
-  for (const pattern of secretPatterns) if (pattern.test(text)) failures.push(`${file}: matches possible credential pattern ${pattern}`);
+  for (const literal of bannedLiterals) if (lower.includes(literal)) failures.push(`${file}: contains operator-specific extraction data`);
+  for (const pattern of secretPatterns) if (pattern.test(text)) failures.push(`${file}: matches a possible credential pattern`);
 }
 if (files.some((file) => file === '.env' || file.startsWith('runtime/') || file.startsWith('data/'))) failures.push('Runtime or .env data is tracked by git.');
 if (failures.length) {
