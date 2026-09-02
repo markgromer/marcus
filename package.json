@@ -1,14 +1,16 @@
 {
   "name": "marcus-personal-os",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": false,
   "type": "module",
-  "description": "Self-hosted personal operating system with durable context, approval-gated execution, and pluggable coding agents.",
+  "description": "Self-hosted personal operating system that coordinates AI coding agents, durable project context, and approval-gated execution.",
   "engines": { "node": ">=22" },
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
+    "doctor": "node scripts/doctor.mjs",
+    "demo": "MARCUS_DEMO=1 node src/server.js",
     "check": "node scripts/check-public-safety.mjs",
     "test": "node --test"
   },
