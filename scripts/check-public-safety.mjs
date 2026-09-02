@@ -2,7 +2,8 @@ import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
 // Build extraction-specific markers from fragments so this checker does not flag its own source.
-// The public GitHub owner/login is intentionally allowed; private operator identity and machine data are not.
+// The public GitHub owner/login and legal license attribution are intentionally allowed;
+// private operator identity inside runtime/product data and machine-specific data are not.
 const bannedLiterals = [
   ['mark', ' ', 'gromer'].join(''),
   ['c:', '\\\\', 'users', '\\\\', 'markg'].join(''),
@@ -26,10 +27,12 @@ for (const file of files) {
   let text;
   try { text = await fs.readFile(file, 'utf8'); } catch { continue; }
   const lower = text.toLowerCase();
-  for (const literal of bannedLiterals) if (lower.includes(literal)) failures.push(`${file}: contains operator-specific extraction data`);
+  if (file !== 'LICENSE') {
+    for (const literal of bannedLiterals) if (lower.includes(literal)) failures.push(`${file}: contains operator-specific extraction data`);
+  }
   for (const pattern of secretPatterns) if (pattern.test(text)) failures.push(`${file}: matches a possible credential pattern`);
 }
-if (files.some((file) => file === '.env' || file.startsWith('runtime/') || file.startsWith('data/'))) failures.push('Runtime or .env data is tracked by git.');
+if (files.some((file) => file === '.env' || file.startsWith('runtime/') || file.startsWith('runtime-demo/') || file.startsWith('data/'))) failures.push('Runtime or .env data is tracked by git.');
 if (failures.length) {
   console.error('Public-safety check failed:\n' + failures.map((item) => `- ${item}`).join('\n'));
   process.exit(1);
