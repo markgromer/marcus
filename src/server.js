@@ -17,6 +17,7 @@ const host = process.env.MARCUS_HOST || '127.0.0.1';
 const port = Number(process.env.MARCUS_PORT || 3030);
 const adminToken = String(process.env.MARCUS_ADMIN_TOKEN || '');
 const isLoopbackHost = ['127.0.0.1', 'localhost', '::1'].includes(host);
+const localSession = crypto.randomBytes(32).toString('hex');
 
 if (!adminToken) console.warn('WARNING: MARCUS_ADMIN_TOKEN is not configured. Remote API requests will be denied until setup is completed.');
 if (!isLoopbackHost && !adminToken) throw new Error('Refusing non-loopback bind without MARCUS_ADMIN_TOKEN.');
@@ -30,15 +31,25 @@ function isLocalRequest(req) {
   return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
 }
 
-function tokenMatches(candidate) {
-  if (!adminToken || !candidate) return false;
-  const a = Buffer.from(adminToken);
-  const b = Buffer.from(candidate);
+function secureEqual(left, right) {
+  if (!left || !right) return false;
+  const a = Buffer.from(String(left));
+  const b = Buffer.from(String(right));
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+function cookies(req) {
+  return Object.fromEntries(String(req.headers.cookie || '').split(';').map((part) => part.trim()).filter(Boolean).map((part) => {
+    const index = part.indexOf('=');
+    return index === -1 ? [part, ''] : [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
+  }));
+}
+
+function tokenMatches(candidate) { return secureEqual(adminToken, candidate); }
+function sessionMatches(req) { return isLoopbackHost && isLocalRequest(req) && secureEqual(localSession, cookies(req).marcus_session); }
+
 function requireAdmin(req, res, next) {
-  if (isLoopbackHost && isLocalRequest(req)) return next();
+  if (sessionMatches(req)) return next();
   const bearer = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const token = String(req.headers['x-marcus-token'] || bearer || '');
   if (!tokenMatches(token)) return res.status(401).json({ error: 'Unauthorized' });
@@ -59,6 +70,7 @@ app.get('/api/health', async (req, res) => {
 app.get('/api/bootstrap', async (req, res, next) => {
   try {
     if (!isLoopbackHost || !isLocalRequest(req)) return res.status(403).json({ error: 'Bootstrap is only available from the local machine.' });
+    res.setHeader('Set-Cookie', `marcus_session=${encodeURIComponent(localSession)}; HttpOnly; SameSite=Strict; Path=/`);
     const environment = await detectEnvironment();
     const config = await loadConfig({ required: false });
     res.json({ configured: Boolean(config.operator?.name), environment, config: publicConfig(config) });
@@ -67,7 +79,7 @@ app.get('/api/bootstrap', async (req, res, next) => {
 
 app.post('/api/setup', async (req, res, next) => {
   try {
-    if (!isLoopbackHost || !isLocalRequest(req)) return res.status(403).json({ error: 'First-run setup is local-only.' });
+    if (!sessionMatches(req)) return res.status(403).json({ error: 'First-run setup requires the local MARCUS session.' });
     const body = req.body || {};
     const operatorName = String(body.operatorName || '').trim();
     if (!operatorName) return res.status(400).json({ error: 'Your name is required.' });
@@ -141,7 +153,7 @@ app.post('/api/guided-operation', async (req, res, next) => {
     const project = projects.find((item) => item.id === req.body?.projectId) || projects[0];
     if (!project) return res.status(400).json({ error: 'Import a project before creating the guided operation.' });
     const config = await loadConfig();
-    const prompt = String(req.body?.prompt || '').trim() || `Audit this project before changing anything. Identify the highest-value concrete improvement that can be safely completed now. Implement that one improvement, run the relevant checks or tests, and summarize exactly what changed and any remaining risk. Do not deploy, publish, change billing, or perform destructive actions.`;
+    const prompt = String(req.body?.prompt || '').trim() || 'Audit this project before changing anything. Identify the highest-value concrete improvement that can be safely completed now. Implement that one improvement, run the relevant checks or tests, and summarize exactly what changed and any remaining risk. Do not deploy, publish, change billing, or perform destructive actions.';
     const operation = await createOperation({ type: 'coding.task', projectId: project.id, payload: { prompt } }, config);
     res.status(201).json({ operation, project });
   } catch (error) { next(error); }
