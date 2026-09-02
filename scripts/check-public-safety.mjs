@@ -2,8 +2,8 @@ import fs from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
 // Build extraction-specific markers from fragments so this checker does not flag its own source.
+// The public GitHub owner/login is intentionally allowed; private operator identity and machine data are not.
 const bannedLiterals = [
-  ['mark', 'gromer'].join(''),
   ['mark', ' ', 'gromer'].join(''),
   ['c:', '\\\\', 'users', '\\\\', 'markg'].join(''),
   ['task', '-tracker-', '5wsa'].join(''),

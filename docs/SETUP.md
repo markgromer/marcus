@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- Node.js 20+
+- Node.js 22+
 - Git
 - At least one chat provider credential (`OPENAI_API_KEY` or `ANTHROPIC_API_KEY`)
 - Optional: Claude Code and/or Codex CLI installed and authenticated if you want coding operations

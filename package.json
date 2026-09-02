@@ -4,7 +4,7 @@
   "private": false,
   "type": "module",
   "description": "Self-hosted personal operating system with durable context, approval-gated execution, and pluggable coding agents.",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "setup": "node scripts/setup.mjs",
     "start": "node src/server.js",
@@ -15,7 +15,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.123.0",
     "dotenv": "^17.4.2",
-    "express": "^4.22.2",
+    "express": "^5.2.1",
     "openai": "^7.9.0"
   }
 }
