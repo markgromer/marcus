@@ -1,0 +1,22 @@
+{
+  "name": "marcus-personal-os",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Self-hosted personal operating system with durable context, approval-gated execution, and pluggable coding agents.",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "check": "node scripts/check-public-safety.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.67.0",
+    "dotenv": "^17.2.2",
+    "express": "^4.22.1",
+    "openai": "^5.20.1",
+    "zod": "^4.1.5"
+  }
+}
